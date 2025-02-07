@@ -22,7 +22,7 @@ router.get('/customer/:customer_id', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
-ç  
+
   
 
 // ✅ GET all policies

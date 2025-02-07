@@ -4,7 +4,8 @@ import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline } from '@mu
 export const ThemeContext = createContext();
 
 const ThemeProvider = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
+  // Change from false → true for default dark mode
+  const [darkMode, setDarkMode] = useState(true);
 
   const toggleDarkMode = () => {
     setDarkMode((prevMode) => !prevMode);

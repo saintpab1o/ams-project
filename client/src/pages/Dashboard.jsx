@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { getCustomers, getPolicies } from '../services/api';
-import { Container, Typography, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider } from '@mui/material';
+import {
+  Container,
+  Typography,
+  Grid,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Divider,
+  Box
+} from '@mui/material';
+
+// Icons
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import WaterDropIcon from '@mui/icons-material/WaterDrop';
+import TornadoSharpIcon from '@mui/icons-material/TornadoSharp';
 
 const Dashboard = () => {
   const [customerCount, setCustomerCount] = useState(0);
@@ -18,52 +36,110 @@ const Dashboard = () => {
 
       setCustomerCount(customers.length);
       setPolicyCount(policies.length);
-      const totalPremiumValue = policies.reduce((sum, policy) => sum + Number(policy.premium || 0), 0);
-      setTotalPremium(totalPremiumValue);
 
-      // Calculate Policies Expiring in Next 30 Days
+      const totalPrem = policies.reduce((sum, pol) => sum + Number(pol.premium || 0), 0);
+      setTotalPremium(totalPrem);
+
+      // Expiring Soon (30 days)
       const today = new Date();
-      const expiringSoonCount = policies.filter((policy) => {
-        const expDate = new Date(policy.expiration_date);
+      const soonCount = policies.filter((pol) => {
+        const expDate = new Date(pol.expiration_date);
         const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
         return diffDays <= 30;
       }).length;
-      setExpiringSoon(expiringSoonCount);
+      setExpiringSoon(soonCount);
 
-      // Fix Calculations for Average Premium & Revenue Forecast
-      setAveragePremium(policies.length > 0 ? (totalPremiumValue / policies.length).toFixed(2) : 0);
-      setRevenueForecast(policies.length > 0 ? (totalPremiumValue * 1.1).toFixed(2) : 0);
+      // Average Premium & Revenue Forecast
+      const avgPrem = policies.length > 0 ? (totalPrem / policies.length).toFixed(2) : 0;
+      setAveragePremium(avgPrem);
 
-      // Get Top 3 States with Most Policies
-      const stateCounts = customers.reduce((acc, customer) => {
-        acc[customer.state] = (acc[customer.state] || 0) + 1;
+      const revForecast = policies.length > 0 ? (totalPrem * 1.1).toFixed(2) : 0;
+      setRevenueForecast(revForecast);
+
+      // Map each policy -> state
+      const customerStateMap = customers.reduce((acc, c) => {
+        acc[c.customer_id] = c.state;
         return acc;
       }, {});
 
-      const sortedStates = Object.entries(stateCounts)
-        .sort((a, b) => b[1] - a[1]) // Sort by policy count
-        .slice(0, 3) // Get top 3
-        .map(([state, count]) => ({ state, count }));
+      // Sum premium by state
+      const statePremiums = {};
+      for (const pol of policies) {
+        const st = customerStateMap[pol.customer_id];
+        if (!st) continue;
 
-      setTopStates(sortedStates);
+        if (!statePremiums[st]) {
+          statePremiums[st] = { totalPremium: 0, policyCount: 0 };
+        }
+        statePremiums[st].totalPremium += Number(pol.premium || 0);
+        statePremiums[st].policyCount += 1;
+      }
+
+      // Sort top 5
+      const allStatesArray = Object.entries(statePremiums).map(([st, info]) => ({
+        state: st,
+        totalPremium: info.totalPremium,
+        policyCount: info.policyCount
+      }));
+      allStatesArray.sort((a, b) => b.totalPremium - a.totalPremium);
+
+      const top5 = allStatesArray.slice(0, 5);
+      const maxPremium = top5.length > 0 ? top5[0].totalPremium : 0;
+
+      // Hazard sets
+      const fireStates = new Set(['CA','NV', 'OR', 'OK', 'ID', 'TX', 'CO', 'UT']);
+      const floodStates = new Set(['FL', 'TX', 'NC', 'LA', 'SC', 'AL', 'GA', 'MI', 'NY', 'MA']);
+      const tornadoStates = new Set(['IL', 'AL', 'CO', 'TX', 'MI', 'NB', 'IA', 'GA', 'OH', 'TN']);
+
+      const updatedTopStates = top5.map((item, idx) => {
+        // base exposure 0..80
+        let exposure = maxPremium ? (item.totalPremium / maxPremium) * 80 : 0;
+        const icons = [];
+
+        // Fire Hazard
+        if (fireStates.has(item.state)) {
+          exposure += 15;
+          icons.push(<LocalFireDepartmentIcon key={`fire-${item.state}`} sx={{ marginRight: 1, color: 'red' }} />);
+        }
+        // Flood Hazard
+        if (floodStates.has(item.state)) {
+          exposure += 15;
+          icons.push(<WaterDropIcon key={`water-${item.state}`} sx={{ marginRight: 1, color: 'blue' }} />);
+        }
+        // Tornado Hazard
+        if (tornadoStates.has(item.state)) {
+          exposure += 15;
+          icons.push(<TornadoSharpIcon  key={`wind-${item.state}`} sx={{ marginRight: 1, color: 'gray' }} />);
+        }
+
+        return {
+          ...item,
+          exposure: Math.round(exposure),
+          icons
+        };
+      });
+
+      setTopStates(updatedTopStates);
     };
 
     fetchData();
   }, []);
 
-  // Apply the same background color as the original "Total Customers" and "Total Premium" boxes
+  // Card style
   const cardStyle = {
     padding: '20px',
     textAlign: 'center',
-    backgroundColor: '#2D2F36', // Dark gray, works in both light and dark mode
+    backgroundColor: '#2D2F36',
     color: '#FFFFFF',
-    borderRadius: '8px',
+    borderRadius: '8px'
   };
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>Dashboard</Typography>
-      <Divider style={{ marginBottom: '20px' }} />
+      <Typography variant="h4" gutterBottom>
+        Welcome, Paul!
+      </Typography>
+      <Divider sx={{ marginBottom: 3 }} />
 
       <Grid container spacing={3}>
         <Grid item xs={12} sm={4}>
@@ -72,14 +148,12 @@ const Dashboard = () => {
             <Typography variant="h4">{customerCount}</Typography>
           </Paper>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Paper sx={cardStyle}>
             <Typography variant="h6">Total Policies</Typography>
             <Typography variant="h4">{policyCount}</Typography>
           </Paper>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <Paper sx={cardStyle}>
             <Typography variant="h6">Total Premium ($)</Typography>
@@ -93,7 +167,6 @@ const Dashboard = () => {
             <Typography variant="h4">{expiringSoon}</Typography>
           </Paper>
         </Grid>
-
         <Grid item xs={12} sm={6}>
           <Paper sx={cardStyle}>
             <Typography variant="h6">Avg. Policy Premium</Typography>
@@ -104,35 +177,47 @@ const Dashboard = () => {
         <Grid item xs={12}>
           <Paper sx={cardStyle}>
             <Typography variant="h6">Revenue Forecast (Next Year)</Typography>
-            <Typography variant="h4">${revenueForecast.toLocaleString()}</Typography>
+            <Typography variant="h4">
+              ${Number(revenueForecast).toLocaleString()}
+            </Typography>
           </Paper>
         </Grid>
 
-        {/* Top 3 States Table */}
+        {/* Top 5 States by Premium with Hazards */}
         <Grid item xs={12}>
           <Paper sx={{ padding: 3 }}>
-            <Typography variant="h6" align="center">Top 3 States with Most Policies</Typography>
+            <Typography variant="h6" align="center" gutterBottom>
+              Top 5 States by Total Premium
+            </Typography>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Rank</strong></TableCell>
                     <TableCell><strong>State</strong></TableCell>
-                    <TableCell><strong>Number of Policies</strong></TableCell>
+                    <TableCell><strong>Policy Count</strong></TableCell>
+                    <TableCell><strong>Total Premium</strong></TableCell>
+                    <TableCell><strong>Exposure</strong></TableCell>
+                    <TableCell><strong>Type</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {topStates.length > 0 ? (
-                    topStates.map((state, index) => (
+                    topStates.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{state.state}</TableCell>
-                        <TableCell>{state.count}</TableCell>
+                        <TableCell>{item.state}</TableCell>
+                        <TableCell>{item.policyCount}</TableCell>
+                        <TableCell>${item.totalPremium.toLocaleString()}</TableCell>
+                        <TableCell>{item.exposure}</TableCell>
+                        <TableCell><Box display="flex" alignItems="center">{item.icons}</Box></TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} align="center">No data available</TableCell>
+                      <TableCell colSpan={6} align="center">
+                        No data available
+                      </TableCell>
                     </TableRow>
                   )}
                 </TableBody>

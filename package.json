@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "concurrently": "^9.1.2",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "vercel": "^41.0.2"
   }
 }

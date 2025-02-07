@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { createCustomer, createPolicy } from '../services/api';
-import { Container, Typography, TextField, MenuItem, Button, Paper, Grid } from '@mui/material';
+import { createCustomer, createPolicy, getCustomers, getPolicies } from '../services/api';
+import { Container, Typography, TextField, Button, MenuItem, Card, CardContent, Grid, Alert } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 
-const QuotingPage = () => {
-  const [customer, setCustomer] = useState({
+const QuotingPage = ({ updateDashboard }) => {
+  const [quoteData, setQuoteData] = useState({
     first_name: '',
     last_name: '',
     email: '',
@@ -11,76 +13,119 @@ const QuotingPage = () => {
     address: '',
     city: '',
     state: '',
-    zipcode: ''
+    zipcode: '',
+    policy_type: '',
   });
-  const [policyType, setPolicyType] = useState('Auto');
-  const [proposedPremium, setProposedPremium] = useState(null);
-  const [quoteGenerated, setQuoteGenerated] = useState(false);
+  const [generatedQuote, setGeneratedQuote] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setCustomer((prev) => ({ ...prev, [name]: value }));
+    setQuoteData((prev) => ({ ...prev, [name]: value }));
   };
 
   const generateQuote = () => {
-    const basePremium = policyType === 'Auto' ? 1200 : 1400;
-    const discount = Math.random() * 200;
-    setProposedPremium((basePremium - discount).toFixed(2));
-    setQuoteGenerated(true);
+    if (!quoteData.policy_type) return;
+
+    const premium = (Math.random() * (1400 - 1000) + 1000).toFixed(2);
+    const policyNumber = `POL-${Math.floor(Math.random() * 10000)}`;
+
+    setGeneratedQuote({ ...quoteData, proposed_premium: premium, policy_number: policyNumber });
   };
 
-  const handleAddPolicy = async () => {
+  const confirmQuote = async () => {
     try {
-      const newCustomer = await createCustomer(customer);
+      const customerResponse = await createCustomer({
+        first_name: generatedQuote.first_name,
+        last_name: generatedQuote.last_name,
+        email: generatedQuote.email,
+        phone: generatedQuote.phone,
+        address: generatedQuote.address,
+        city: generatedQuote.city,
+        state: generatedQuote.state,
+        zipcode: generatedQuote.zipcode,
+      });
+      
+      const newCustomerId = customerResponse.customer_id;
+      
       await createPolicy({
-        customer_id: newCustomer.customer_id,
-        policy_number: `POL-${Math.floor(Math.random() * 1000)}`,
-        policy_type: policyType,
+        customer_id: newCustomerId,
+        policy_type: generatedQuote.policy_type,
+        policy_number: generatedQuote.policy_number,
         effective_date: new Date().toISOString().split('T')[0],
         expiration_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-        premium: proposedPremium
+        premium: generatedQuote.proposed_premium,
       });
-      alert('Policy successfully added!');
-      setCustomer({ first_name: '', last_name: '', email: '', phone: '', address: '', city: '', state: '', zipcode: '' });
-      setPolicyType('Auto');
-      setProposedPremium(null);
-      setQuoteGenerated(false);
+
+      setSaveStatus({ success: true, message: 'Quote confirmed and saved!' });
+      setGeneratedQuote(null);
+      updateDashboard();
     } catch (error) {
-      console.error('Error adding policy:', error);
+      setSaveStatus({ success: false, message: 'Could not save quote. Please try again.' });
+      console.error('Error saving quote:', error);
     }
   };
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>Insurance Quoting</Typography>
-      <Paper sx={{ padding: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={6}><TextField fullWidth label="First Name" name="first_name" value={customer.first_name} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="Last Name" name="last_name" value={customer.last_name} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="Email" name="email" value={customer.email} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="Phone" name="phone" value={customer.phone} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="Address" name="address" value={customer.address} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="City" name="city" value={customer.city} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="State" name="state" value={customer.state} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}><TextField fullWidth label="Zipcode" name="zipcode" value={customer.zipcode} onChange={handleInputChange} /></Grid>
-          <Grid item xs={6}>
-            <TextField select fullWidth label="Policy Type" value={policyType} onChange={(e) => setPolicyType(e.target.value)}>
-              <MenuItem value="Auto">Auto</MenuItem>
-              <MenuItem value="Home">Home</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={6}>
-            <Button fullWidth variant="contained" onClick={generateQuote}>Generate Quote</Button>
-          </Grid>
+      <Typography variant="h4" gutterBottom>Generate Quote</Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <TextField label="First Name" name="first_name" fullWidth onChange={handleChange} />
         </Grid>
-        {quoteGenerated && (
-          <Paper sx={{ marginTop: 3, padding: 2, backgroundColor: '#2D2F36', color: '#FFFFFF', textAlign: 'center' }}>
-            <Typography variant="h6">Proposed Premium:</Typography>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#FFD700' }}>${proposedPremium}</Typography>
-            <Button fullWidth variant="contained" color="primary" onClick={handleAddPolicy} sx={{ marginTop: 2 }}>Add Policy</Button>
-          </Paper>
-        )}
-      </Paper>
+        <Grid item xs={12} sm={6}>
+          <TextField label="Last Name" name="last_name" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField label="Email" name="email" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField label="Phone" name="phone" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField label="Address" name="address" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={6}>
+          <TextField label="City" name="city" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={3}>
+          <TextField label="State" name="state" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={3}>
+          <TextField label="Zipcode" name="zipcode" fullWidth onChange={handleChange} />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField select label="Policy Type" name="policy_type" fullWidth onChange={handleChange}>
+            <MenuItem value="auto">Auto</MenuItem>
+            <MenuItem value="home">Home</MenuItem>
+          </TextField>
+        </Grid>
+        <Grid item xs={12}>
+          <Button variant="contained" onClick={generateQuote}>Generate Quote</Button>
+        </Grid>
+      </Grid>
+      
+      {generatedQuote && (
+        <Card sx={{ marginTop: 3, padding: 2 }}>
+          <CardContent>
+            <Typography variant="h6">Quote Preview</Typography>
+            <Typography>Name: {generatedQuote.first_name} {generatedQuote.last_name}</Typography>
+            <Typography>Email: {generatedQuote.email}</Typography>
+            <Typography>Phone: {generatedQuote.phone}</Typography>
+            <Typography>Address: {generatedQuote.address}, {generatedQuote.city}, {generatedQuote.state} {generatedQuote.zipcode}</Typography>
+            <Typography>Policy Type: {generatedQuote.policy_type}</Typography>
+            <Typography>Policy Number: {generatedQuote.policy_number}</Typography>
+            <Typography>Premium: ${generatedQuote.proposed_premium}</Typography>
+            <Button variant="contained" color="success" onClick={confirmQuote}>Confirm & Save</Button>
+          </CardContent>
+        </Card>
+      )}
+      
+      {saveStatus && (
+        <Alert severity={saveStatus.success ? "success" : "error"} sx={{ marginTop: 2 }}>
+          {saveStatus.success ? <CheckCircleIcon /> : <ErrorIcon />} {saveStatus.message}
+        </Alert>
+      )}
     </Container>
   );
 };
