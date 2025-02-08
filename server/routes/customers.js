@@ -82,6 +82,65 @@ router.post('/', async (req, res) => {
   }
 });
 
+// UPDATE a customer by ID
+router.put('/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const {
+        first_name,
+        last_name,
+        email,
+        phone,
+        date_of_birth,
+        address,
+        city,
+        state,
+        zipcode
+      } = req.body;
+  
+      // Parameterized UPDATE statement
+      const updateQuery = `
+        UPDATE customers
+        SET
+          first_name = $1,
+          last_name = $2,
+          email = $3,
+          phone = $4,
+          date_of_birth = $5,
+          address = $6,
+          city = $7,
+          state = $8,
+          zipcode = $9
+        WHERE customer_id = $10
+        RETURNING *
+      `;
+  
+      const { rows } = await pool.query(updateQuery, [
+        first_name,
+        last_name,
+        email,
+        phone,
+        date_of_birth,
+        address,
+        city,
+        state,
+        zipcode,
+        id
+      ]);
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+  
+      // Return the updated row
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+
 // DELETE a customer
 router.delete('/:id', async (req, res) => {
   try {
