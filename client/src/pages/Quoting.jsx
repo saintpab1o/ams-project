@@ -31,8 +31,8 @@ const QuotingPage = ({ updateDashboard }) => {
   const [saveStatus, setSaveStatus] = useState(null);
 
   useEffect(() => {
-    // Fetch latest customer data on load
-    getCustomers();
+    // Fetch all customers on mount (optional, used to check existing emails quickly)
+    getCustomers().catch((err) => console.error(err));
   }, []);
 
   const handleChange = (e) => {
@@ -43,7 +43,9 @@ const QuotingPage = ({ updateDashboard }) => {
   const generateQuote = () => {
     if (!quoteData.policy_type) return;
 
+    // Generate a random premium between $1000-$1400
     const premium = (Math.random() * (1400 - 1000) + 1000).toFixed(2);
+    // Random policy number
     const policyNumber = `POL-${Math.floor(Math.random() * 10000)}`;
 
     setGeneratedQuote({
@@ -55,13 +57,18 @@ const QuotingPage = ({ updateDashboard }) => {
 
   const confirmQuote = async () => {
     try {
+      // Fetch all customers to see if the email already exists
       const customers = await getCustomers();
-      let existingCustomer = customers.find((c) => c.email === quoteData.email);
+      let existingCustomer = customers.find(
+        (c) => c.email === quoteData.email
+      );
       let customerId;
 
       if (existingCustomer) {
+        // If found, reuse that ID
         customerId = existingCustomer.customer_id;
       } else {
+        // Otherwise, create a new customer
         const customerResponse = await createCustomer({
           first_name: quoteData.first_name,
           last_name: quoteData.last_name,
@@ -76,6 +83,7 @@ const QuotingPage = ({ updateDashboard }) => {
         customerId = customerResponse.customer_id;
       }
 
+      // Create a policy referencing that customer
       await createPolicy({
         customer_id: customerId,
         policy_type: generatedQuote.policy_type,
@@ -91,7 +99,10 @@ const QuotingPage = ({ updateDashboard }) => {
 
       setSaveStatus({ success: true, message: 'Quote confirmed and saved!' });
       setGeneratedQuote(null);
-      updateDashboard();
+
+      if (updateDashboard) {
+        updateDashboard();
+      }
     } catch (error) {
       setSaveStatus({
         success: false,
@@ -179,7 +190,6 @@ const QuotingPage = ({ updateDashboard }) => {
             onChange={handleChange}
           />
         </Grid>
-        {/* Date of Birth */}
         <Grid item xs={12} sm={6}>
           <TextField
             label="Date of Birth"
@@ -188,9 +198,7 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.date_of_birth}
             onChange={handleChange}
-            InputLabelProps={{
-              shrink: true
-            }}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -202,6 +210,7 @@ const QuotingPage = ({ updateDashboard }) => {
             value={quoteData.policy_type}
             onChange={handleChange}
           >
+            <MenuItem value="">Select Policy Type</MenuItem>
             <MenuItem value="auto">Auto</MenuItem>
             <MenuItem value="home">Home</MenuItem>
           </TextField>
@@ -230,10 +239,17 @@ const QuotingPage = ({ updateDashboard }) => {
               Date of Birth: {generatedQuote.date_of_birth}
             </Typography>
             <Typography>Policy Type: {generatedQuote.policy_type}</Typography>
-            <Typography>Policy Number: {generatedQuote.policy_number}</Typography>
+            <Typography>
+              Policy Number: {generatedQuote.policy_number}
+            </Typography>
             <Typography>Premium: ${generatedQuote.proposed_premium}</Typography>
-            <Button variant="contained" color="success" onClick={confirmQuote}>
-              Confirm & Save
+            <Button
+              variant="contained"
+              color="success"
+              onClick={confirmQuote}
+              sx={{ marginTop: 2 }}
+            >
+              Confirm &amp; Save
             </Button>
           </CardContent>
         </Card>
