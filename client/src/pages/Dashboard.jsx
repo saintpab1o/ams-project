@@ -12,7 +12,8 @@ import {
   TableHead,
   TableRow,
   Divider,
-  Box
+  Box,
+  Tooltip
 } from '@mui/material';
 
 // Icons
@@ -87,11 +88,12 @@ const Dashboard = () => {
       const maxPremium = top5.length > 0 ? top5[0].totalPremium : 0;
 
       // Hazard sets
-      const fireStates = new Set(['CA','NV', 'OR', 'OK', 'ID', 'TX', 'CO', 'UT']);
-      const floodStates = new Set(['FL', 'TX', 'NC', 'LA', 'SC', 'AL', 'GA', 'MI', 'NY', 'MA']);
-      const tornadoStates = new Set(['IL', 'AL', 'CO', 'TX', 'MI', 'NB', 'IA', 'GA', 'OH', 'TN']);
+      const fireStates = new Set(['CA','NV','OR','OK','ID','TX','CO','UT']);
+      const floodStates = new Set(['FL','TX','NC','LA','SC','AL','GA','MI','NY','MA']);
+      const tornadoStates = new Set(['IL','AL','CO','TX','MI','NE','IA','GA','OH','TN']); 
+      // (typo fix: "NB" => "NE" for Nebraska)
 
-      const updatedTopStates = top5.map((item, idx) => {
+      const updatedTopStates = top5.map((item) => {
         // base exposure 0..80
         let exposure = maxPremium ? (item.totalPremium / maxPremium) * 80 : 0;
         const icons = [];
@@ -99,17 +101,29 @@ const Dashboard = () => {
         // Fire Hazard
         if (fireStates.has(item.state)) {
           exposure += 15;
-          icons.push(<LocalFireDepartmentIcon key={`fire-${item.state}`} sx={{ marginRight: 1, color: 'red' }} />);
+          icons.push(
+            <Tooltip key={`fire-${item.state}`} title="High-risk fire exposure">
+              <LocalFireDepartmentIcon sx={{ marginRight: 1, color: 'red' }} />
+            </Tooltip>
+          );
         }
         // Flood Hazard
         if (floodStates.has(item.state)) {
           exposure += 15;
-          icons.push(<WaterDropIcon key={`water-${item.state}`} sx={{ marginRight: 1, color: 'blue' }} />);
+          icons.push(
+            <Tooltip key={`water-${item.state}`} title="High-risk flood exposure">
+              <WaterDropIcon sx={{ marginRight: 1, color: 'blue' }} />
+            </Tooltip>
+          );
         }
         // Tornado Hazard
         if (tornadoStates.has(item.state)) {
           exposure += 15;
-          icons.push(<TornadoSharpIcon  key={`wind-${item.state}`} sx={{ marginRight: 1, color: 'gray' }} />);
+          icons.push(
+            <Tooltip key={`tornado-${item.state}`} title="High-risk tornado exposure">
+              <TornadoSharpIcon sx={{ marginRight: 1, color: 'gray' }} />
+            </Tooltip>
+          );
         }
 
         return {
@@ -198,19 +212,23 @@ const Dashboard = () => {
                     <TableCell><strong>Policy Count</strong></TableCell>
                     <TableCell><strong>Total Premium</strong></TableCell>
                     <TableCell><strong>Exposure</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
+                    <TableCell><strong>Hazards</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {topStates.length > 0 ? (
                     topStates.map((item, index) => (
-                      <TableRow key={index}>
+                      <TableRow key={item.state}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{item.state}</TableCell>
                         <TableCell>{item.policyCount}</TableCell>
                         <TableCell>${item.totalPremium.toLocaleString()}</TableCell>
                         <TableCell>{item.exposure}</TableCell>
-                        <TableCell><Box display="flex" alignItems="center">{item.icons}</Box></TableCell>
+                        <TableCell>
+                          <Box display="flex" alignItems="center">
+                            {item.icons}
+                          </Box>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (

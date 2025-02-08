@@ -9,12 +9,28 @@ import {
   Card,
   CardContent,
   Grid,
-  Alert
+  Alert,
+  InputAdornment
 } from '@mui/material';
+
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import PolicyIcon from '@mui/icons-material/Policy';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import HomeIcon from '@mui/icons-material/Home';
+import LocationCityIcon from '@mui/icons-material/LocationCity';
+import PublicIcon from '@mui/icons-material/Public';
+import PinDropIcon from '@mui/icons-material/PinDrop';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import PersonIcon from '@mui/icons-material/Person';
+import { useLocation } from 'react-router-dom';
 
 const QuotingPage = ({ updateDashboard }) => {
+  const { state } = useLocation();
+  const prefill = state?.prefill;
+
   const [quoteData, setQuoteData] = useState({
     first_name: '',
     last_name: '',
@@ -31,9 +47,25 @@ const QuotingPage = ({ updateDashboard }) => {
   const [saveStatus, setSaveStatus] = useState(null);
 
   useEffect(() => {
-    // Fetch all customers on mount (optional, used to check existing emails quickly)
     getCustomers().catch((err) => console.error(err));
-  }, []);
+    if (prefill) {
+      setQuoteData((prev) => ({
+        ...prev,
+        first_name: prefill.first_name || '',
+        last_name: prefill.last_name || '',
+        email: prefill.email || '',
+        phone: prefill.phone || '',
+        address: prefill.address || '',
+        city: prefill.city || '',
+        state: prefill.state || '',
+        zipcode: prefill.zipcode || '',
+        date_of_birth: prefill.date_of_birth
+          ? prefill.date_of_birth.split('T')[0]
+          : '',
+        policy_type: ''
+      }));
+    }
+  }, [prefill]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,11 +75,8 @@ const QuotingPage = ({ updateDashboard }) => {
   const generateQuote = () => {
     if (!quoteData.policy_type) return;
 
-    // Generate a random premium between $1000-$1400
     const premium = (Math.random() * (1400 - 1000) + 1000).toFixed(2);
-    // Random policy number
     const policyNumber = `POL-${Math.floor(Math.random() * 10000)}`;
-
     setGeneratedQuote({
       ...quoteData,
       proposed_premium: premium,
@@ -57,18 +86,13 @@ const QuotingPage = ({ updateDashboard }) => {
 
   const confirmQuote = async () => {
     try {
-      // Fetch all customers to see if the email already exists
       const customers = await getCustomers();
-      let existingCustomer = customers.find(
-        (c) => c.email === quoteData.email
-      );
+      let existingCustomer = customers.find((c) => c.email === quoteData.email);
       let customerId;
 
       if (existingCustomer) {
-        // If found, reuse that ID
         customerId = existingCustomer.customer_id;
       } else {
-        // Otherwise, create a new customer
         const customerResponse = await createCustomer({
           first_name: quoteData.first_name,
           last_name: quoteData.last_name,
@@ -83,7 +107,6 @@ const QuotingPage = ({ updateDashboard }) => {
         customerId = customerResponse.customer_id;
       }
 
-      // Create a policy referencing that customer
       await createPolicy({
         customer_id: customerId,
         policy_type: generatedQuote.policy_type,
@@ -125,6 +148,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.first_name}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -134,6 +164,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.last_name}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -143,6 +180,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.email}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -152,6 +196,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.phone}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PhoneIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -161,6 +212,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.address}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <HomeIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={6}>
@@ -170,6 +228,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.city}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LocationCityIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={3}>
@@ -179,6 +244,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.state}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PublicIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={3}>
@@ -188,6 +260,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.zipcode}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PinDropIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -199,6 +278,13 @@ const QuotingPage = ({ updateDashboard }) => {
             value={quoteData.date_of_birth}
             onChange={handleChange}
             InputLabelProps={{ shrink: true }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <CalendarMonthIcon />
+                </InputAdornment>
+              )
+            }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -209,6 +295,13 @@ const QuotingPage = ({ updateDashboard }) => {
             fullWidth
             value={quoteData.policy_type}
             onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PolicyIcon />
+                </InputAdornment>
+              )
+            }}
           >
             <MenuItem value="">Select Policy Type</MenuItem>
             <MenuItem value="auto">Auto</MenuItem>
@@ -216,7 +309,12 @@ const QuotingPage = ({ updateDashboard }) => {
           </TextField>
         </Grid>
         <Grid item xs={12}>
-          <Button variant="contained" onClick={generateQuote}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<MonetizationOnIcon />}
+            onClick={generateQuote}
+          >
             Generate Quote
           </Button>
         </Grid>
@@ -235,19 +333,19 @@ const QuotingPage = ({ updateDashboard }) => {
               Address: {generatedQuote.address}, {generatedQuote.city},{' '}
               {generatedQuote.state} {generatedQuote.zipcode}
             </Typography>
-            <Typography>
-              Date of Birth: {generatedQuote.date_of_birth}
-            </Typography>
+            <Typography>Date of Birth: {generatedQuote.date_of_birth}</Typography>
             <Typography>Policy Type: {generatedQuote.policy_type}</Typography>
             <Typography>
               Policy Number: {generatedQuote.policy_number}
             </Typography>
             <Typography>Premium: ${generatedQuote.proposed_premium}</Typography>
+
             <Button
               variant="contained"
               color="success"
               onClick={confirmQuote}
               sx={{ marginTop: 2 }}
+              startIcon={<CheckCircleIcon />}
             >
               Confirm &amp; Save
             </Button>
