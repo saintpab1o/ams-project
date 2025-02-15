@@ -234,7 +234,7 @@ const CustomersPage = () => {
   const [customerToDelete, setCustomerToDelete] = useState(null);
 
   // For toggling between card-view vs table-view
-  // Default now set to "table" to show Salesforce style first.
+  // Default set to "table" for the Salesforce style
   const [viewMode, setViewMode] = useState('table'); // "cards" | "table"
 
   useEffect(() => {
@@ -482,6 +482,15 @@ const CustomersPage = () => {
   // Check if a field is among the error messages -> highlight in red
   function fieldHasError(field) {
     return formErrors.some((err) => err.toLowerCase().includes(field));
+  }
+
+  // Sort policies by ascending days until renewal
+  function sortPoliciesByDaysUntilRenewal(policies) {
+    return [...policies].sort(
+      (a, b) =>
+        calculateDaysUntilRenewal(a.expiration_date) -
+        calculateDaysUntilRenewal(b.expiration_date)
+    );
   }
 
   return (
@@ -1036,7 +1045,10 @@ const CustomersPage = () => {
       {viewMode === 'cards' ? (
         <Grid container spacing={2}>
           {filteredCustomers.map((customer) => {
-            const policies = customerPoliciesMap[customer.customer_id] || [];
+            // Sort policies ascending by days until renewal
+            const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
+            const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
+
             const totalPremium = policies.reduce(
               (sum, policy) => sum + Number(policy.premium || 0),
               0
@@ -1224,7 +1236,10 @@ const CustomersPage = () => {
             </TableHead>
             <TableBody>
               {filteredCustomers.map((customer) => {
-                const policies = customerPoliciesMap[customer.customer_id] || [];
+                // Sort policies ascending by days until renewal
+                const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
+                const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
+
                 const totalPremium = policies.reduce(
                   (sum, policy) => sum + Number(policy.premium || 0),
                   0
