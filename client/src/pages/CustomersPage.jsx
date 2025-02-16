@@ -56,6 +56,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import WarningIcon from '@mui/icons-material/Warning';
 import TableViewIcon from '@mui/icons-material/TableView';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import PersonIcon from '@mui/icons-material/Person'; // Link to detail
 
 // ----------------------------
 // Hazard States
@@ -166,7 +167,7 @@ function calculateDaysUntilRenewal(expirationDate) {
   const exp = new Date(expirationDate);
   const today = new Date();
   const diff = exp - today;
-  return Math.max(0, Math.ceil(diff / (1000*60*60*24)));
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
 function sortPoliciesByDaysUntilRenewal(policies) {
@@ -177,7 +178,6 @@ function sortPoliciesByDaysUntilRenewal(policies) {
   );
 }
 
-// Return the hazard icons for a given state, centered
 function getHazardIcons(st) {
   const icons = [];
   if (fireStates.has(st)) {
@@ -221,11 +221,11 @@ const CustomersPage = () => {
   const [customerPoliciesMap, setCustomerPoliciesMap] = useState({});
   const [expandedCustomer, setExpandedCustomer] = useState(null);
 
-  // For editing an existing customer
+  // For editing
   const [editCustomer, setEditCustomer] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // For creating a new customer
+  // For creating
   const [newCustomer, setNewCustomer] = useState({
     first_name: '',
     last_name: '',
@@ -239,7 +239,7 @@ const CustomersPage = () => {
   });
   const [newOpen, setNewOpen] = useState(false);
 
-  // Searching & Validation
+  // Searching & validation
   const [searchText, setSearchText] = useState('');
   const [formErrors, setFormErrors] = useState([]);
 
@@ -247,7 +247,7 @@ const CustomersPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
 
-  // Default to table
+  // Card vs table
   const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => {
@@ -334,13 +334,16 @@ const CustomersPage = () => {
   // EDIT
   const openEditDialog = (customer) => {
     setFormErrors([]);
-    const dateOnly = customer.date_of_birth ? customer.date_of_birth.split('T')[0] : '';
+    const dateOnly = customer.date_of_birth
+      ? customer.date_of_birth.split('T')[0]
+      : '';
     setEditCustomer({ ...customer, date_of_birth: dateOnly });
     setEditOpen(true);
   };
 
   async function handleEditCustomer() {
     if (!editCustomer) return;
+
     const errors = validateCustomerData(editCustomer);
     if (errors.length > 0) {
       setFormErrors(errors);
@@ -392,24 +395,39 @@ const CustomersPage = () => {
     setCustomerToDelete(null);
   };
 
-  // Searching
+  // Searching logic for name, phone, policy
   function matchesSearch(customer) {
     const txt = searchText.toLowerCase().trim();
-    if (!txt) return true;
+    if (!txt) return true; // empty => show all
 
-    const fullName = (customer.first_name + ' ' + customer.last_name).toLowerCase();
-    if (fullName.includes(txt)) return true;
+    // 1) Name substring
+    const fName = (customer.first_name || '').toLowerCase();
+    const lName = (customer.last_name || '').toLowerCase();
+    const fullName = `${fName} ${lName}`;
+    if (fName.includes(txt) || lName.includes(txt) || fullName.includes(txt)) {
+      return true;
+    }
 
+    // 2) Phone digits
     const phoneDigits = (customer.phone || '').replace(/\D/g, '');
-    if (phoneDigits.includes(txt.replace(/\D/g, ''))) return true;
+    const searchDigits = txt.replace(/\D/g, '');
+    if (phoneDigits.includes(searchDigits)) {
+      return true;
+    }
 
+    // 3) Policy
     const pols = customerPoliciesMap[customer.customer_id] || [];
-    if (pols.some((p) => p.policy_number.toLowerCase().includes(txt))) return true;
+    for (let p of pols) {
+      const policyNum = (p.policy_number || '').toLowerCase();
+      if (policyNum.includes(txt)) {
+        return true;
+      }
+    }
 
     return false;
   }
 
-  // PDF logic - no images
+  // PDF doc logic
   const handleDownloadPolicyDoc = (policy, customer) => {
     try {
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -459,7 +477,7 @@ const CustomersPage = () => {
       nextLine += 14;
 
       const createdAt = customer.created_at ? new Date(customer.created_at) : null;
-      const diffDays = createdAt ? (Date.now() - createdAt) / (1000*3600*24) : 0;
+      const diffDays = createdAt ? (Date.now() - createdAt) / (1000 * 3600 * 24) : 0;
       const custSince = createdAt ? createdAt.toLocaleDateString() : '(Unknown)';
       let platinum = false;
       if (diffDays > 365) {
@@ -521,7 +539,7 @@ const CustomersPage = () => {
     }
   };
 
-  // Filter the customers
+  // Final filter
   const filteredCustomers = customers.filter(matchesSearch);
 
   return (
@@ -540,7 +558,7 @@ const CustomersPage = () => {
           Showing {filteredCustomers.length} of {customers.length} customers
         </Typography>
 
-        <Tooltip title={`Switch to ${viewMode === 'cards' ? 'Table' : 'Card'} view`}>
+        <Tooltip title={`Switch to ${viewMode === 'cards' ? 'Table' : 'cards'} view`}>
           <IconButton
             onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
             sx={{ color: 'secondary.main', mr: 2 }}
@@ -566,31 +584,21 @@ const CustomersPage = () => {
           {customerToDelete && (
             <Typography>
               Are you sure you want to delete{' '}
-              <strong>
-                {customerToDelete.first_name} {customerToDelete.last_name}
-              </strong>?
+              <strong>{customerToDelete.first_name} {customerToDelete.last_name}</strong>?
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={closeDeleteDialog}
-            color="secondary"
-            variant="contained"
-          >
+          <Button onClick={closeDeleteDialog} color="secondary" variant="contained">
             Cancel
           </Button>
-          <Button
-            onClick={confirmDeleteCustomer}
-            color="error"
-            variant="contained"
-          >
+          <Button onClick={confirmDeleteCustomer} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT CUSTOMER */}
+      {/* EDIT DIALOG */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Customer</DialogTitle>
         <DialogContent dividers>
@@ -611,7 +619,88 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc... */}
+              <Grid item xs={6}>
+                <TextField
+                  label="Last Name"
+                  fullWidth
+                  value={editCustomer.last_name}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, last_name: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Email"
+                  fullWidth
+                  value={editCustomer.email}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, email: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Phone"
+                  fullWidth
+                  value={editCustomer.phone || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, phone: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Address"
+                  fullWidth
+                  value={editCustomer.address || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, address: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="City"
+                  fullWidth
+                  value={editCustomer.city || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, city: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="State"
+                  fullWidth
+                  value={editCustomer.state || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, state: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Zipcode"
+                  fullWidth
+                  value={editCustomer.zipcode || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, zipcode: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Date of Birth"
+                  type="date"
+                  fullWidth
+                  value={editCustomer.date_of_birth || ''}
+                  onChange={(e) =>
+                    setEditCustomer({ ...editCustomer, date_of_birth: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
             </Grid>
           )}
         </DialogContent>
@@ -635,7 +724,7 @@ const CustomersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* NEW CUSTOMER */}
+      {/* NEW CUSTOMER DIALOG */}
       <Dialog open={newOpen} onClose={() => setNewOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonAddIcon />
@@ -679,7 +768,7 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc... */}
+              {/* Repeat for last_name, email, phone, etc. */}
             </Grid>
           </Paper>
         </DialogContent>
@@ -705,9 +794,8 @@ const CustomersPage = () => {
 
       {/* MAIN CONTENT: Cards or Table */}
       {viewMode === 'cards' ? (
-        // CARD VIEW
         <Grid container spacing={2}>
-          {customers.filter(matchesSearch).map((customer) => {
+          {filteredCustomers.map((customer) => {
             const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
             const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
             const totalPremium = policies.reduce(
@@ -740,7 +828,6 @@ const CustomersPage = () => {
                       {(customer.state || '').toUpperCase()} {customer.zipcode}
                     </Typography>
 
-                    {/* ACTIONS */}
                     <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
                       <Box>
                         <Tooltip title="Edit Customer">
@@ -797,16 +884,12 @@ const CustomersPage = () => {
                                   mb: 1
                                 }}
                               >
-                                {/* Policy Type + # */}
                                 <Typography variant="subtitle1" fontWeight="bold">
                                   {policy.policy_type.toUpperCase()} - {policy.policy_number}
                                 </Typography>
 
-                                {/* RISK row, icons centered */}
                                 <Box display="flex" alignItems="center" sx={{ mb: 1 }}>
-                                  <Typography sx={{ fontWeight: 'bold', mr: 1 }}>
-                                    RISK:
-                                  </Typography>
+                                  <Typography sx={{ fontWeight: 'bold', mr: 1 }}>RISK:</Typography>
                                   <Box
                                     display="flex"
                                     justifyContent="center"
@@ -835,7 +918,6 @@ const CustomersPage = () => {
                                   🕒 Days Until Renewal: {calculateDaysUntilRenewal(policy.expiration_date)}
                                 </Typography>
 
-                                {/* Docs + Premium row, center premium */}
                                 <Box
                                   mt={1}
                                   display="flex"
@@ -849,9 +931,7 @@ const CustomersPage = () => {
                                       <PictureAsPdfIcon color="primary" />
                                     </IconButton>
                                   </Tooltip>
-                                  <Typography
-                                    sx={{ fontWeight: 'bold', textAlign: 'center' }}
-                                  >
+                                  <Typography sx={{ fontWeight: 'bold', textAlign: 'center' }}>
                                     💲 Premium: ${policy.premium}
                                   </Typography>
                                 </Box>
@@ -892,10 +972,13 @@ const CustomersPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {customers.filter(matchesSearch).map((customer) => {
+              {filteredCustomers.map((customer) => {
                 const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
                 const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
-                const totalPremium = policies.reduce((sum, p) => sum + Number(p.premium || 0), 0);
+                const totalPremium = policies.reduce(
+                  (sum, p) => sum + Number(p.premium || 0),
+                  0
+                );
                 const isExpanded = expandedCustomer === customer.customer_id;
 
                 return (
@@ -906,9 +989,24 @@ const CustomersPage = () => {
                       sx={{ cursor: 'pointer' }}
                     >
                       <TableCell>
-                        <Typography sx={{ fontWeight: 'bold' }}>
-                          {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
-                        </Typography>
+                        <Box display="flex" alignItems="center">
+                          <Tooltip title="View Customer Detail">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/customers/${customer.customer_id}`);
+                              }}
+                              size="small"
+                              color="primary"
+                              sx={{ mr: 1 }}
+                            >
+                              <PersonIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Typography sx={{ fontWeight: 'bold' }}>
+                            {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{formatPhone(customer.phone)}</TableCell>
@@ -971,17 +1069,6 @@ const CustomersPage = () => {
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
-                                    {/*
-                                      Column order:
-                                      1) Policy Type
-                                      2) Policy #
-                                      3) RISK (center icons)
-                                      4) Effective
-                                      5) Expiration
-                                      6) Days Until Renewal (center)
-                                      7) Docs
-                                      8) Premium (center)
-                                    */}
                                     <TableCell><strong>Policy Type</strong></TableCell>
                                     <TableCell><strong>Policy #</strong></TableCell>
                                     <TableCell align="center"><strong>RISK</strong></TableCell>
@@ -999,13 +1086,10 @@ const CustomersPage = () => {
 
                                     return (
                                       <TableRow key={policy.policy_id}>
-                                        {/* Policy Type */}
                                         <TableCell sx={{ fontWeight: 'bold' }}>
                                           {policy.policy_type.toUpperCase()}
                                         </TableCell>
-                                        {/* Policy # */}
                                         <TableCell>{policy.policy_number}</TableCell>
-                                        {/* RISK - center icons */}
                                         <TableCell align="center">
                                           {hazardIcons.length ? (
                                             <Box display="flex" justifyContent="center" flexWrap="wrap">
@@ -1017,18 +1101,14 @@ const CustomersPage = () => {
                                             </Typography>
                                           )}
                                         </TableCell>
-                                        {/* Effective */}
                                         <TableCell>{formatDate(policy.effective_date)}</TableCell>
-                                        {/* Expiration */}
                                         <TableCell>{formatDate(policy.expiration_date)}</TableCell>
-                                        {/* Days - center */}
                                         <TableCell
                                           align="center"
                                           sx={{ color: 'red', fontWeight: 'bold' }}
                                         >
                                           {daysUntil}
                                         </TableCell>
-                                        {/* Docs */}
                                         <TableCell>
                                           <Tooltip title="Download Policy PDF">
                                             <IconButton
@@ -1042,7 +1122,6 @@ const CustomersPage = () => {
                                             </IconButton>
                                           </Tooltip>
                                         </TableCell>
-                                        {/* Premium - center */}
                                         <TableCell align="center">
                                           ${policy.premium}
                                         </TableCell>
@@ -1050,7 +1129,6 @@ const CustomersPage = () => {
                                     );
                                   })}
                                   <TableRow>
-                                    {/* total premium in the final Premium column, center aligned */}
                                     <TableCell colSpan={7} />
                                     <TableCell align="center" sx={{ fontWeight: 'bold' }}>
                                       Total Premium: ${totalPremium.toFixed(2)}
