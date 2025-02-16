@@ -57,12 +57,16 @@ import WarningIcon from '@mui/icons-material/Warning';
 import TableViewIcon from '@mui/icons-material/TableView';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 
-// Hazard sets
+// ----------------------------
+// Hazard States
+// ----------------------------
 const fireStates = new Set(['CA','NV','OR','OK','ID','TX','CO','UT']);
 const floodStates = new Set(['FL','TX','NC','LA','SC','AL','GA','MI','NY','MA']);
 const tornadoStates = new Set(['IL','AL','CO','TX','MI','NE','IA','GA','OH','TN']);
 
-// Sample Disney Data
+// ----------------------------
+// Sample Data
+// ----------------------------
 const sampleDisneyData = [
   {
     first_name: 'Mickey',
@@ -88,7 +92,9 @@ const sampleDisneyData = [
   },
 ];
 
-// Utility / Validation
+// ----------------------------
+// Utility & Validation
+// ----------------------------
 function titleCaseWords(str) {
   return str
     .toLowerCase()
@@ -119,6 +125,7 @@ function validateCustomerData(customer) {
     'zipcode',
     'date_of_birth'
   ];
+
   requiredFields.forEach((field) => {
     if (!customer[field] || !customer[field].trim()) {
       errors.push(`${field} is required.`);
@@ -156,9 +163,9 @@ function formatDate(dateString) {
 
 function calculateDaysUntilRenewal(expirationDate) {
   if (!expirationDate) return 0;
-  const expDate = new Date(expirationDate);
+  const exp = new Date(expirationDate);
   const today = new Date();
-  const diff = expDate - today;
+  const diff = exp - today;
   return Math.max(0, Math.ceil(diff / (1000*60*60*24)));
 }
 
@@ -170,7 +177,42 @@ function sortPoliciesByDaysUntilRenewal(policies) {
   );
 }
 
-// CustomersPage
+// Return the hazard icons for a given state, centered
+function getHazardIcons(st) {
+  const icons = [];
+  if (fireStates.has(st)) {
+    icons.push(
+      <LocalFireDepartmentIcon
+        key="fire"
+        sx={{ ml: 0.5, color: 'red' }}
+        titleAccess="High-risk fire exposure"
+      />
+    );
+  }
+  if (floodStates.has(st)) {
+    icons.push(
+      <WaterDropIcon
+        key="water"
+        sx={{ ml: 0.5, color: 'blue' }}
+        titleAccess="High-risk flood exposure"
+      />
+    );
+  }
+  if (tornadoStates.has(st)) {
+    icons.push(
+      <TornadoSharpIcon
+        key="tornado"
+        sx={{ ml: 0.5, color: 'gray' }}
+        titleAccess="High-risk tornado exposure"
+      />
+    );
+  }
+  return icons;
+}
+
+// ----------------------------
+// Main Component
+// ----------------------------
 const CustomersPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -179,11 +221,11 @@ const CustomersPage = () => {
   const [customerPoliciesMap, setCustomerPoliciesMap] = useState({});
   const [expandedCustomer, setExpandedCustomer] = useState(null);
 
-  // Editing
+  // For editing an existing customer
   const [editCustomer, setEditCustomer] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // Creating
+  // For creating a new customer
   const [newCustomer, setNewCustomer] = useState({
     first_name: '',
     last_name: '',
@@ -197,16 +239,17 @@ const CustomersPage = () => {
   });
   const [newOpen, setNewOpen] = useState(false);
 
-  // Searching
+  // Searching & Validation
   const [searchText, setSearchText] = useState('');
   const [formErrors, setFormErrors] = useState([]);
+
+  // Deletion
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
 
   // Default to table
   const [viewMode, setViewMode] = useState('table');
 
-  // On mount
   useEffect(() => {
     fetchData();
   }, []);
@@ -231,7 +274,7 @@ const CustomersPage = () => {
     }
   }
 
-  // Expand
+  // Expand/collapse
   const handleTogglePolicies = (customerId) => {
     setExpandedCustomer((prev) => (prev === customerId ? null : customerId));
   };
@@ -283,6 +326,7 @@ const CustomersPage = () => {
     setNewCustomer(sampleDisneyData[idx]);
     setFormErrors([]);
   };
+
   const handleGenerateQuoteFromNew = () => {
     navigate('/quoting', { state: { prefill: newCustomer } });
   };
@@ -313,7 +357,9 @@ const CustomersPage = () => {
     };
     try {
       const updated = await updateCustomer(editCustomer.customer_id, sanitized);
-      setCustomers((prev) => prev.map((c) => (c.customer_id === updated.customer_id ? updated : c)));
+      setCustomers((prev) =>
+        prev.map((c) => (c.customer_id === updated.customer_id ? updated : c))
+      );
       setEditOpen(false);
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -331,7 +377,9 @@ const CustomersPage = () => {
     if (!customerToDelete) return;
     try {
       await deleteCustomer(customerToDelete.customer_id);
-      setCustomers((prev) => prev.filter((c) => c.customer_id !== customerToDelete.customer_id));
+      setCustomers((prev) =>
+        prev.filter((c) => c.customer_id !== customerToDelete.customer_id)
+      );
     } catch (error) {
       console.error('Error deleting customer:', error);
     }
@@ -339,32 +387,10 @@ const CustomersPage = () => {
     setCustomerToDelete(null);
   };
 
-  // Hazards
-  function getHazardIcons(st) {
-    const icons = [];
-    if (fireStates.has(st)) {
-      icons.push(
-        <Tooltip key="fire" title="High-risk fire exposure">
-          <LocalFireDepartmentIcon sx={{ ml: 1, color: 'red' }} />
-        </Tooltip>
-      );
-    }
-    if (floodStates.has(st)) {
-      icons.push(
-        <Tooltip key="water" title="High-risk flood exposure">
-          <WaterDropIcon sx={{ ml: 1, color: 'blue' }} />
-        </Tooltip>
-      );
-    }
-    if (tornadoStates.has(st)) {
-      icons.push(
-        <Tooltip key="tornado" title="High-risk tornado exposure">
-          <TornadoSharpIcon sx={{ ml: 1, color: 'gray' }} />
-        </Tooltip>
-      );
-    }
-    return icons;
-  }
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setCustomerToDelete(null);
+  };
 
   // Searching
   function matchesSearch(customer) {
@@ -383,7 +409,7 @@ const CustomersPage = () => {
     return false;
   }
 
-  // PDF: no doc.addImage at all -> no chance for "incomplete/corrupt PNG"
+  // PDF logic - no images
   const handleDownloadPolicyDoc = (policy, customer) => {
     try {
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -402,13 +428,12 @@ const CustomersPage = () => {
       doc.line(50, 80, 550, 80);
 
       let curY = 90;
-      doc.setFontSize(10);
       doc.text('Issued by SecureShield Insurance Agency', 50, curY);
       curY += 12;
       doc.text('1234 Market St, Springfield, USA', 50, curY);
       curY += 12;
       doc.text('Phone: (800) 555-1234 | Web: secureshieldexample.com', 50, curY);
-      doc.text(`Date Issued: ${now.toLocaleDateString()}`, 400, 50); // top right corner
+      doc.text(`Date Issued: ${now.toLocaleDateString()}`, 400, 50);
 
       curY += 30;
       doc.setDrawColor(180);
@@ -433,12 +458,13 @@ const CustomersPage = () => {
       );
       nextLine += 14;
 
-      // Platinum if over 1 year
       const createdAt = customer.created_at ? new Date(customer.created_at) : null;
-      const diffDays = createdAt ? (now - createdAt) / (1000*3600*24) : 0;
+      const diffDays = createdAt ? (Date.now() - createdAt) / (1000*3600*24) : 0;
       const custSince = createdAt ? createdAt.toLocaleDateString() : '(Unknown)';
       let platinum = false;
-      if (diffDays > 365) platinum = true;
+      if (diffDays > 365) {
+        platinum = true;
+      }
 
       doc.text(`Customer Since: ${custSince}`, 50, nextLine);
       if (platinum) {
@@ -487,7 +513,6 @@ const CustomersPage = () => {
       footY += 14;
       doc.text('Please contact your agent for additional details or changes.', 50, footY);
 
-      // open in new tab
       const pdfUrl = doc.output('bloburl');
       window.open(pdfUrl, '_blank');
     } catch (err) {
@@ -496,12 +521,12 @@ const CustomersPage = () => {
     }
   };
 
-  // Filtered
+  // Filter the customers
   const filteredCustomers = customers.filter(matchesSearch);
 
   return (
     <Container maxWidth="xl">
-      {/* top bar */}
+      {/* Top search bar */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <TextField
           variant="outlined"
@@ -531,8 +556,8 @@ const CustomersPage = () => {
         </Tooltip>
       </Box>
 
-      {/* Delete Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      {/* DELETE DIALOG */}
+      <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <WarningIcon color="error" />
           Confirm Deletion
@@ -540,25 +565,32 @@ const CustomersPage = () => {
         <DialogContent dividers>
           {customerToDelete && (
             <Typography>
-              Are you sure you want to delete <strong>{customerToDelete.first_name} {customerToDelete.last_name}</strong>?
+              Are you sure you want to delete{' '}
+              <strong>
+                {customerToDelete.first_name} {customerToDelete.last_name}
+              </strong>?
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => setDeleteDialogOpen(false)}
+            onClick={closeDeleteDialog}
             color="secondary"
             variant="contained"
           >
             Cancel
           </Button>
-          <Button onClick={confirmDeleteCustomer} color="error" variant="contained">
+          <Button
+            onClick={confirmDeleteCustomer}
+            color="error"
+            variant="contained"
+          >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT Customer */}
+      {/* EDIT CUSTOMER */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Customer</DialogTitle>
         <DialogContent dividers>
@@ -569,7 +601,6 @@ const CustomersPage = () => {
           )}
           {editCustomer && (
             <Grid container spacing={2}>
-              {/* For brevity, show one field as example */}
               <Grid item xs={6}>
                 <TextField
                   label="First Name"
@@ -580,7 +611,7 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc. */}
+              {/* Repeat for last_name, email, phone, etc... */}
             </Grid>
           )}
         </DialogContent>
@@ -620,15 +651,24 @@ const CustomersPage = () => {
           )}
           <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
             <Box display="flex" justifyContent="flex-end" mb={2} gap={2}>
-              <Button variant="contained" color="warning" onClick={handleLoadSample} startIcon={<AutoFixHighIcon />}>
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={handleLoadSample}
+                startIcon={<AutoFixHighIcon />}
+              >
                 Load Sample Data
               </Button>
-              <Button variant="contained" color="primary" onClick={handleGenerateQuoteFromNew} startIcon={<MonetizationOnIcon />}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleGenerateQuoteFromNew}
+                startIcon={<MonetizationOnIcon />}
+              >
                 Generate Quote
               </Button>
             </Box>
             <Grid container spacing={2}>
-              {/* Example field */}
               <Grid item xs={6}>
                 <TextField
                   label="First Name"
@@ -639,7 +679,7 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc. */}
+              {/* Repeat for last_name, email, phone, etc... */}
             </Grid>
           </Paper>
         </DialogContent>
@@ -663,28 +703,26 @@ const CustomersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* MAIN CONTENT: cards or table */}
+      {/* MAIN CONTENT: Cards or Table */}
       {viewMode === 'cards' ? (
+        // CARD VIEW
         <Grid container spacing={2}>
           {customers.filter(matchesSearch).map((customer) => {
             const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
             const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
-            const totalPremium = policies.reduce((sum, p) => sum + Number(p.premium || 0), 0);
-            const hazardIcons = getHazardIcons(customer.state);
+            const totalPremium = policies.reduce(
+              (sum, p) => sum + Number(p.premium || 0),
+              0
+            );
             const isExpanded = expandedCustomer === customer.customer_id;
 
             return (
               <Grid item xs={12} sm={6} md={4} key={customer.customer_id}>
                 <Card>
                   <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
-                      </Typography>
-                      <Box display="flex" alignItems="center">
-                        {hazardIcons}
-                      </Box>
-                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
+                    </Typography>
                     <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'gray' }}>
                       Customer Since:{' '}
                       {customer.created_at
@@ -699,9 +737,10 @@ const CustomersPage = () => {
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       📍 {titleCaseWords(customer.address)}, {titleCaseWords(customer.city)},{' '}
-                      {customer.state.toUpperCase()} {customer.zipcode}
+                      {(customer.state || '').toUpperCase()} {customer.zipcode}
                     </Typography>
 
+                    {/* ACTIONS */}
                     <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
                       <Box>
                         <Tooltip title="Edit Customer">
@@ -745,40 +784,85 @@ const CustomersPage = () => {
                     <CardContent sx={{ borderTop: `1px solid ${theme.palette.divider}` }}>
                       {policies.length > 0 ? (
                         <>
-                          {policies.map((policy) => (
-                            <Box
-                              key={policy.policy_id}
-                              sx={{
-                                p: 1,
-                                border: 1,
-                                borderRadius: 1,
-                                borderColor: 'divider',
-                                mb: 1
-                              }}
-                            >
-                              <Typography variant="subtitle1" fontWeight="bold">
-                                {policy.policy_type.toUpperCase()} - {policy.policy_number}
-                              </Typography>
-                              <Typography>
-                                💲 Premium: <strong>${policy.premium}</strong>
-                              </Typography>
-                              <Typography>📅 Effective: {formatDate(policy.effective_date)}</Typography>
-                              <Typography>📅 Expiration: {formatDate(policy.expiration_date)}</Typography>
-                              <Typography variant="subtitle2" sx={{ color: 'red', fontWeight: 'bold' }}>
-                                🕒 Days Until Renewal: {calculateDaysUntilRenewal(policy.expiration_date)}
-                              </Typography>
+                          {policies.map((policy) => {
+                            const hazardIcons = getHazardIcons(customer.state);
+                            return (
+                              <Box
+                                key={policy.policy_id}
+                                sx={{
+                                  p: 1,
+                                  border: 1,
+                                  borderRadius: 1,
+                                  borderColor: 'divider',
+                                  mb: 1
+                                }}
+                              >
+                                {/* Policy Type + # */}
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  {policy.policy_type.toUpperCase()} - {policy.policy_number}
+                                </Typography>
 
-                              <Tooltip title="Download Policy PDF">
-                                <IconButton
-                                  onClick={() => handleDownloadPolicyDoc(policy, customer)}
-                                  sx={{ mt: 1 }}
+                                {/* RISK row, icons centered */}
+                                <Box display="flex" alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ fontWeight: 'bold', mr: 1 }}>
+                                    RISK:
+                                  </Typography>
+                                  <Box
+                                    display="flex"
+                                    justifyContent="center"
+                                    flexWrap="wrap"
+                                    width="100%"
+                                  >
+                                    {hazardIcons.length ? hazardIcons : (
+                                      <Typography variant="body2" color="textSecondary">
+                                        None
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+
+                                <Typography>📅 Effective: {formatDate(policy.effective_date)}</Typography>
+                                <Typography>📅 Expiration: {formatDate(policy.expiration_date)}</Typography>
+                                <Typography
+                                  variant="subtitle2"
+                                  sx={{
+                                    color: 'red',
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    mt: 1
+                                  }}
                                 >
-                                  <PictureAsPdfIcon color="primary" />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          ))}
-                          <Typography variant="subtitle1" fontWeight="bold">
+                                  🕒 Days Until Renewal: {calculateDaysUntilRenewal(policy.expiration_date)}
+                                </Typography>
+
+                                {/* Docs + Premium row, center premium */}
+                                <Box
+                                  mt={1}
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="space-between"
+                                >
+                                  <Tooltip title="Download Policy PDF">
+                                    <IconButton
+                                      onClick={() => handleDownloadPolicyDoc(policy, customer)}
+                                    >
+                                      <PictureAsPdfIcon color="primary" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Typography
+                                    sx={{ fontWeight: 'bold', textAlign: 'center' }}
+                                  >
+                                    💲 Premium: ${policy.premium}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            );
+                          })}
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight="bold"
+                            sx={{ textAlign: 'center', mt: 1 }}
+                          >
                             Total Premium: ${totalPremium.toFixed(2)}
                           </Typography>
                         </>
@@ -793,13 +877,12 @@ const CustomersPage = () => {
           })}
         </Grid>
       ) : (
-        // TABLE
+        // TABLE VIEW
         <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell><strong>Name</strong></TableCell>
-                <TableCell><strong>Risk</strong></TableCell>
                 <TableCell><strong>Email</strong></TableCell>
                 <TableCell><strong>Phone</strong></TableCell>
                 <TableCell><strong>Address</strong></TableCell>
@@ -813,7 +896,6 @@ const CustomersPage = () => {
                 const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
                 const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
                 const totalPremium = policies.reduce((sum, p) => sum + Number(p.premium || 0), 0);
-                const hazardIcons = getHazardIcons(customer.state);
                 const isExpanded = expandedCustomer === customer.customer_id;
 
                 return (
@@ -827,15 +909,6 @@ const CustomersPage = () => {
                         <Typography sx={{ fontWeight: 'bold' }}>
                           {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {hazardIcons.length > 0 ? (
-                          <Box display="flex" alignItems="center">
-                            {hazardIcons}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">None</Typography>
-                        )}
                       </TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{formatPhone(customer.phone)}</TableCell>
@@ -892,34 +965,70 @@ const CustomersPage = () => {
 
                     {isExpanded && (
                       <TableRow>
-                        <TableCell colSpan={8} sx={{ backgroundColor: theme.palette.action.hover }}>
+                        <TableCell colSpan={7} sx={{ backgroundColor: theme.palette.action.hover }}>
                           {policies.length > 0 ? (
                             <Box sx={{ mt: 1 }}>
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
+                                    {/*
+                                      Column order:
+                                      1) Policy Type
+                                      2) Policy #
+                                      3) RISK (center icons)
+                                      4) Effective
+                                      5) Expiration
+                                      6) Days Until Renewal (center)
+                                      7) Docs
+                                      8) Premium (center)
+                                    */}
                                     <TableCell><strong>Policy Type</strong></TableCell>
                                     <TableCell><strong>Policy #</strong></TableCell>
-                                    <TableCell><strong>Premium</strong></TableCell>
+                                    <TableCell align="center"><strong>RISK</strong></TableCell>
                                     <TableCell><strong>Effective</strong></TableCell>
                                     <TableCell><strong>Expiration</strong></TableCell>
-                                    <TableCell><strong>Days Until Renewal</strong></TableCell>
+                                    <TableCell align="center"><strong>Days Until Renewal</strong></TableCell>
                                     <TableCell><strong>Docs</strong></TableCell>
+                                    <TableCell align="center"><strong>Premium</strong></TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
                                   {policies.map((policy) => {
+                                    const hazardIcons = getHazardIcons(customer.state);
                                     const daysUntil = calculateDaysUntilRenewal(policy.expiration_date);
+
                                     return (
                                       <TableRow key={policy.policy_id}>
-                                        <TableCell>{policy.policy_type.toUpperCase()}</TableCell>
+                                        {/* Policy Type */}
+                                        <TableCell sx={{ fontWeight: 'bold' }}>
+                                          {policy.policy_type.toUpperCase()}
+                                        </TableCell>
+                                        {/* Policy # */}
                                         <TableCell>{policy.policy_number}</TableCell>
-                                        <TableCell>${policy.premium}</TableCell>
+                                        {/* RISK - center icons */}
+                                        <TableCell align="center">
+                                          {hazardIcons.length ? (
+                                            <Box display="flex" justifyContent="center" flexWrap="wrap">
+                                              {hazardIcons}
+                                            </Box>
+                                          ) : (
+                                            <Typography variant="body2" color="textSecondary">
+                                              None
+                                            </Typography>
+                                          )}
+                                        </TableCell>
+                                        {/* Effective */}
                                         <TableCell>{formatDate(policy.effective_date)}</TableCell>
+                                        {/* Expiration */}
                                         <TableCell>{formatDate(policy.expiration_date)}</TableCell>
-                                        <TableCell sx={{ color: 'red', fontWeight: 'bold' }}>
+                                        {/* Days - center */}
+                                        <TableCell
+                                          align="center"
+                                          sx={{ color: 'red', fontWeight: 'bold' }}
+                                        >
                                           {daysUntil}
                                         </TableCell>
+                                        {/* Docs */}
                                         <TableCell>
                                           <Tooltip title="Download Policy PDF">
                                             <IconButton
@@ -933,12 +1042,17 @@ const CustomersPage = () => {
                                             </IconButton>
                                           </Tooltip>
                                         </TableCell>
+                                        {/* Premium - center */}
+                                        <TableCell align="center">
+                                          ${policy.premium}
+                                        </TableCell>
                                       </TableRow>
                                     );
                                   })}
                                   <TableRow>
-                                    <TableCell colSpan={2} />
-                                    <TableCell colSpan={5} sx={{ fontWeight: 'bold' }}>
+                                    {/* total premium in the final Premium column, center aligned */}
+                                    <TableCell colSpan={7} />
+                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>
                                       Total Premium: ${totalPremium.toFixed(2)}
                                     </TableCell>
                                   </TableRow>
