@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { jsPDF } from 'jspdf'; // ensure: npm install jspdf
+import { jsPDF } from 'jspdf';
 import {
   Container,
   Card,
@@ -28,7 +28,6 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 
-// API calls
 import {
   getCustomers,
   getPolicies,
@@ -43,6 +42,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import PersonIcon from '@mui/icons-material/Person'; // Person icon for linking to detail page
 
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
@@ -58,14 +58,7 @@ import TableViewIcon from '@mui/icons-material/TableView';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 
 // ----------------------------
-// Hazard States
-// ----------------------------
-const fireStates = new Set(['CA','NV','OR','OK','ID','TX','CO','UT']);
-const floodStates = new Set(['FL','TX','NC','LA','SC','AL','GA','MI','NY','MA']);
-const tornadoStates = new Set(['IL','AL','CO','TX','MI','NE','IA','GA','OH','TN']);
-
-// ----------------------------
-// Sample Data
+// SAMPLE DISNEY DATA
 // ----------------------------
 const sampleDisneyData = [
   {
@@ -91,6 +84,13 @@ const sampleDisneyData = [
     date_of_birth: '1928-01-01'
   },
 ];
+
+// ----------------------------
+// Hazard sets
+// ----------------------------
+const fireStates = new Set(['CA','NV','OR','OK','ID','TX','CO','UT']);
+const floodStates = new Set(['FL','TX','NC','LA','SC','AL','GA','MI','NY','MA']);
+const tornadoStates = new Set(['IL','AL','CO','TX','MI','NE','IA','GA','OH','TN']);
 
 // ----------------------------
 // Utility & Validation
@@ -166,7 +166,7 @@ function calculateDaysUntilRenewal(expirationDate) {
   const exp = new Date(expirationDate);
   const today = new Date();
   const diff = exp - today;
-  return Math.max(0, Math.ceil(diff / (1000*60*60*24)));
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
 function sortPoliciesByDaysUntilRenewal(policies) {
@@ -177,7 +177,6 @@ function sortPoliciesByDaysUntilRenewal(policies) {
   );
 }
 
-// Return the hazard icons for a given state, centered
 function getHazardIcons(st) {
   const icons = [];
   if (fireStates.has(st)) {
@@ -211,7 +210,7 @@ function getHazardIcons(st) {
 }
 
 // ----------------------------
-// Main Component
+// CustomersPage
 // ----------------------------
 const CustomersPage = () => {
   const navigate = useNavigate();
@@ -221,11 +220,11 @@ const CustomersPage = () => {
   const [customerPoliciesMap, setCustomerPoliciesMap] = useState({});
   const [expandedCustomer, setExpandedCustomer] = useState(null);
 
-  // For editing an existing customer
+  // For editing
   const [editCustomer, setEditCustomer] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // For creating a new customer
+  // For creating
   const [newCustomer, setNewCustomer] = useState({
     first_name: '',
     last_name: '',
@@ -239,15 +238,15 @@ const CustomersPage = () => {
   });
   const [newOpen, setNewOpen] = useState(false);
 
-  // Searching & Validation
+  // Searching
   const [searchText, setSearchText] = useState('');
+  // Validation
   const [formErrors, setFormErrors] = useState([]);
-
-  // Deletion
+  // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
 
-  // Default to table
+  // Card vs table
   const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => {
@@ -274,12 +273,12 @@ const CustomersPage = () => {
     }
   }
 
-  // Expand/collapse
+  // Expand row to show policies
   const handleTogglePolicies = (customerId) => {
     setExpandedCustomer((prev) => (prev === customerId ? null : customerId));
   };
 
-  // CREATE
+  // NEW Customer
   const openNewCustomerDialog = () => {
     setNewCustomer({
       first_name: '',
@@ -377,9 +376,7 @@ const CustomersPage = () => {
     if (!customerToDelete) return;
     try {
       await deleteCustomer(customerToDelete.customer_id);
-      setCustomers((prev) =>
-        prev.filter((c) => c.customer_id !== customerToDelete.customer_id)
-      );
+      setCustomers((prev) => prev.filter((c) => c.customer_id !== customerToDelete.customer_id));
     } catch (error) {
       console.error('Error deleting customer:', error);
     }
@@ -404,12 +401,15 @@ const CustomersPage = () => {
     if (phoneDigits.includes(txt.replace(/\D/g, ''))) return true;
 
     const pols = customerPoliciesMap[customer.customer_id] || [];
-    if (pols.some((p) => p.policy_number.toLowerCase().includes(txt))) return true;
+    const policyMatch = pols.some((p) =>
+      p.policy_number.toLowerCase().includes(txt)
+    );
+    if (policyMatch) return true;
 
     return false;
   }
 
-  // PDF logic - no images
+  // PDF doc generation (no images)
   const handleDownloadPolicyDoc = (policy, customer) => {
     try {
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -521,12 +521,9 @@ const CustomersPage = () => {
     }
   };
 
-  // Filter the customers
-  const filteredCustomers = customers.filter(matchesSearch);
-
   return (
     <Container maxWidth="xl">
-      {/* Top search bar */}
+      {/* Top toolbar */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <TextField
           variant="outlined"
@@ -537,10 +534,10 @@ const CustomersPage = () => {
           sx={{ width: 400, mr: 2 }}
         />
         <Typography variant="body2" color="textSecondary" sx={{ flexGrow: 1 }}>
-          Showing {filteredCustomers.length} of {customers.length} customers
+          Showing {customers.filter(matchesSearch).length} of {customers.length} customers
         </Typography>
 
-        <Tooltip title={`Switch to ${viewMode === 'cards' ? 'Table' : 'Card'} view`}>
+        <Tooltip title={`Switch to ${viewMode === 'cards' ? 'Table' : 'cards'} view`}>
           <IconButton
             onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
             sx={{ color: 'secondary.main', mr: 2 }}
@@ -566,31 +563,21 @@ const CustomersPage = () => {
           {customerToDelete && (
             <Typography>
               Are you sure you want to delete{' '}
-              <strong>
-                {customerToDelete.first_name} {customerToDelete.last_name}
-              </strong>?
+              <strong>{customerToDelete.first_name} {customerToDelete.last_name}</strong>?
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={closeDeleteDialog}
-            color="secondary"
-            variant="contained"
-          >
+          <Button onClick={closeDeleteDialog} color="secondary" variant="contained">
             Cancel
           </Button>
-          <Button
-            onClick={confirmDeleteCustomer}
-            color="error"
-            variant="contained"
-          >
+          <Button onClick={confirmDeleteCustomer} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT CUSTOMER */}
+      {/* EDIT DIALOG */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Customer</DialogTitle>
         <DialogContent dividers>
@@ -611,7 +598,7 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc... */}
+              {/* Repeat for last_name, email, phone, etc. */}
             </Grid>
           )}
         </DialogContent>
@@ -635,7 +622,7 @@ const CustomersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* NEW CUSTOMER */}
+      {/* NEW CUSTOMER DIALOG */}
       <Dialog open={newOpen} onClose={() => setNewOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonAddIcon />
@@ -643,6 +630,7 @@ const CustomersPage = () => {
             Add New Customer
           </Typography>
         </DialogTitle>
+
         <DialogContent dividers>
           {formErrors.length > 0 && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -679,7 +667,7 @@ const CustomersPage = () => {
                   }
                 />
               </Grid>
-              {/* Repeat for last_name, email, phone, etc... */}
+              {/* Repeat for last_name, email, phone, address, etc. */}
             </Grid>
           </Paper>
         </DialogContent>
@@ -740,7 +728,6 @@ const CustomersPage = () => {
                       {(customer.state || '').toUpperCase()} {customer.zipcode}
                     </Typography>
 
-                    {/* ACTIONS */}
                     <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
                       <Box>
                         <Tooltip title="Edit Customer">
@@ -769,13 +756,6 @@ const CustomersPage = () => {
                             <ExpandMoreIcon />
                           </IconButton>
                         </Tooltip>
-                        <Button
-                          variant="contained"
-                          sx={{ ml: 1 }}
-                          onClick={() => navigate('/quoting', { state: { prefill: customer } })}
-                        >
-                          Generate Quote
-                        </Button>
                       </Box>
                     </Box>
                   </CardContent>
@@ -785,7 +765,7 @@ const CustomersPage = () => {
                       {policies.length > 0 ? (
                         <>
                           {policies.map((policy) => {
-                            const hazardIcons = getHazardIcons(customer.state);
+                            const days = calculateDaysUntilRenewal(policy.expiration_date);
                             return (
                               <Box
                                 key={policy.policy_id}
@@ -797,72 +777,34 @@ const CustomersPage = () => {
                                   mb: 1
                                 }}
                               >
-                                {/* Policy Type + # */}
-                                <Typography variant="subtitle1" fontWeight="bold">
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                                   {policy.policy_type.toUpperCase()} - {policy.policy_number}
                                 </Typography>
-
-                                {/* RISK row, icons centered */}
-                                <Box display="flex" alignItems="center" sx={{ mb: 1 }}>
-                                  <Typography sx={{ fontWeight: 'bold', mr: 1 }}>
-                                    RISK:
-                                  </Typography>
-                                  <Box
-                                    display="flex"
-                                    justifyContent="center"
-                                    flexWrap="wrap"
-                                    width="100%"
-                                  >
-                                    {hazardIcons.length ? hazardIcons : (
-                                      <Typography variant="body2" color="textSecondary">
-                                        None
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                </Box>
-
-                                <Typography>📅 Effective: {formatDate(policy.effective_date)}</Typography>
-                                <Typography>📅 Expiration: {formatDate(policy.expiration_date)}</Typography>
+                                <Typography>
+                                  💲 Premium: <strong>${policy.premium}</strong>
+                                </Typography>
+                                <Typography>
+                                  📅 Expiration: {formatDate(policy.expiration_date)}
+                                </Typography>
                                 <Typography
                                   variant="subtitle2"
-                                  sx={{
-                                    color: 'red',
-                                    fontWeight: 'bold',
-                                    textAlign: 'center',
-                                    mt: 1
-                                  }}
+                                  sx={{ color: 'red', fontWeight: 'bold' }}
                                 >
-                                  🕒 Days Until Renewal: {calculateDaysUntilRenewal(policy.expiration_date)}
+                                  🕒 Days Until Renewal: {days}
                                 </Typography>
 
-                                {/* Docs + Premium row, center premium */}
-                                <Box
-                                  mt={1}
-                                  display="flex"
-                                  alignItems="center"
-                                  justifyContent="space-between"
-                                >
-                                  <Tooltip title="Download Policy PDF">
-                                    <IconButton
-                                      onClick={() => handleDownloadPolicyDoc(policy, customer)}
-                                    >
-                                      <PictureAsPdfIcon color="primary" />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Typography
-                                    sx={{ fontWeight: 'bold', textAlign: 'center' }}
+                                <Tooltip title="Download Policy PDF">
+                                  <IconButton
+                                    onClick={() => handleDownloadPolicyDoc(policy, customer)}
+                                    sx={{ mt: 1 }}
                                   >
-                                    💲 Premium: ${policy.premium}
-                                  </Typography>
-                                </Box>
+                                    <PictureAsPdfIcon color="primary" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             );
                           })}
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight="bold"
-                            sx={{ textAlign: 'center', mt: 1 }}
-                          >
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                             Total Premium: ${totalPremium.toFixed(2)}
                           </Typography>
                         </>
@@ -895,7 +837,10 @@ const CustomersPage = () => {
               {customers.filter(matchesSearch).map((customer) => {
                 const rawPolicies = customerPoliciesMap[customer.customer_id] || [];
                 const policies = sortPoliciesByDaysUntilRenewal(rawPolicies);
-                const totalPremium = policies.reduce((sum, p) => sum + Number(p.premium || 0), 0);
+                const totalPremium = policies.reduce(
+                  (sum, p) => sum + Number(p.premium || 0),
+                  0
+                );
                 const isExpanded = expandedCustomer === customer.customer_id;
 
                 return (
@@ -905,15 +850,34 @@ const CustomersPage = () => {
                       onClick={() => handleTogglePolicies(customer.customer_id)}
                       sx={{ cursor: 'pointer' }}
                     >
+                      {/* ADDED PERSON ICON to left of name */}
                       <TableCell>
-                        <Typography sx={{ fontWeight: 'bold' }}>
-                          {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
-                        </Typography>
+                        <Box display="flex" alignItems="center">
+                          <Tooltip title="View Customer Detail">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/customers/${customer.customer_id}`);
+                              }}
+                              size="small"
+                              color="primary"
+                              sx={{ mr: 1 }}
+                            >
+                              <PersonIcon />
+                            </IconButton>
+                          </Tooltip>
+
+                          <Typography sx={{ fontWeight: 'bold' }}>
+                            {titleCaseWords(customer.first_name)} {titleCaseWords(customer.last_name)}
+                          </Typography>
+                        </Box>
                       </TableCell>
+
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{formatPhone(customer.phone)}</TableCell>
                       <TableCell>
-                        {titleCaseWords(customer.address)}, {titleCaseWords(customer.city)} {customer.zipcode}
+                        {titleCaseWords(customer.address)}, {titleCaseWords(customer.city)}{' '}
+                        {customer.zipcode}
                       </TableCell>
                       <TableCell>{(customer.state || '').toUpperCase()}</TableCell>
                       <TableCell>
@@ -934,6 +898,7 @@ const CustomersPage = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
+
                         <Tooltip title="Delete Customer">
                           <IconButton
                             onClick={(e) => {
@@ -947,19 +912,6 @@ const CustomersPage = () => {
                             <DeleteIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Generate Quote">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            sx={{ ml: 2 }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate('/quoting', { state: { prefill: customer } });
-                            }}
-                          >
-                            Quote
-                          </Button>
-                        </Tooltip>
                       </TableCell>
                     </TableRow>
 
@@ -971,64 +923,28 @@ const CustomersPage = () => {
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
-                                    {/*
-                                      Column order:
-                                      1) Policy Type
-                                      2) Policy #
-                                      3) RISK (center icons)
-                                      4) Effective
-                                      5) Expiration
-                                      6) Days Until Renewal (center)
-                                      7) Docs
-                                      8) Premium (center)
-                                    */}
                                     <TableCell><strong>Policy Type</strong></TableCell>
                                     <TableCell><strong>Policy #</strong></TableCell>
-                                    <TableCell align="center"><strong>RISK</strong></TableCell>
-                                    <TableCell><strong>Effective</strong></TableCell>
+                                    <TableCell><strong>Premium</strong></TableCell>
                                     <TableCell><strong>Expiration</strong></TableCell>
-                                    <TableCell align="center"><strong>Days Until Renewal</strong></TableCell>
+                                    <TableCell><strong>Days Until Renewal</strong></TableCell>
                                     <TableCell><strong>Docs</strong></TableCell>
-                                    <TableCell align="center"><strong>Premium</strong></TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
                                   {policies.map((policy) => {
-                                    const hazardIcons = getHazardIcons(customer.state);
-                                    const daysUntil = calculateDaysUntilRenewal(policy.expiration_date);
-
+                                    const days = calculateDaysUntilRenewal(policy.expiration_date);
                                     return (
                                       <TableRow key={policy.policy_id}>
-                                        {/* Policy Type */}
-                                        <TableCell sx={{ fontWeight: 'bold' }}>
+                                        <TableCell>
                                           {policy.policy_type.toUpperCase()}
                                         </TableCell>
-                                        {/* Policy # */}
                                         <TableCell>{policy.policy_number}</TableCell>
-                                        {/* RISK - center icons */}
-                                        <TableCell align="center">
-                                          {hazardIcons.length ? (
-                                            <Box display="flex" justifyContent="center" flexWrap="wrap">
-                                              {hazardIcons}
-                                            </Box>
-                                          ) : (
-                                            <Typography variant="body2" color="textSecondary">
-                                              None
-                                            </Typography>
-                                          )}
-                                        </TableCell>
-                                        {/* Effective */}
-                                        <TableCell>{formatDate(policy.effective_date)}</TableCell>
-                                        {/* Expiration */}
+                                        <TableCell>${policy.premium}</TableCell>
                                         <TableCell>{formatDate(policy.expiration_date)}</TableCell>
-                                        {/* Days - center */}
-                                        <TableCell
-                                          align="center"
-                                          sx={{ color: 'red', fontWeight: 'bold' }}
-                                        >
-                                          {daysUntil}
+                                        <TableCell sx={{ color: 'red', fontWeight: 'bold' }}>
+                                          {days}
                                         </TableCell>
-                                        {/* Docs */}
                                         <TableCell>
                                           <Tooltip title="Download Policy PDF">
                                             <IconButton
@@ -1042,17 +958,12 @@ const CustomersPage = () => {
                                             </IconButton>
                                           </Tooltip>
                                         </TableCell>
-                                        {/* Premium - center */}
-                                        <TableCell align="center">
-                                          ${policy.premium}
-                                        </TableCell>
                                       </TableRow>
                                     );
                                   })}
                                   <TableRow>
-                                    {/* total premium in the final Premium column, center aligned */}
-                                    <TableCell colSpan={7} />
-                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                                    <TableCell colSpan={2} />
+                                    <TableCell colSpan={4} sx={{ fontWeight: 'bold' }}>
                                       Total Premium: ${totalPremium.toFixed(2)}
                                     </TableCell>
                                   </TableRow>
