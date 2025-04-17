@@ -75,8 +75,17 @@ const QuotingPage = ({ updateDashboard }) => {
   const generateQuote = () => {
     if (!quoteData.policy_type) return;
 
-    const premium = (Math.random() * (1400 - 1000) + 1000).toFixed(2);
-    const policyNumber = `POL-${Math.floor(Math.random() * 10000)}`;
+    // Set premium range based on policy type
+    const premiumRange = quoteData.policy_type === 'Auto' 
+      ? { min: 800, max: 1100 } 
+      : { min: 1200, max: 1800 };
+    
+    const premium = (Math.random() * (premiumRange.max - premiumRange.min) + premiumRange.min).toFixed(2);
+    
+    // Create policy number based on policy type
+    const prefix = quoteData.policy_type === 'Auto' ? 'AU-' : 'HO-';
+    const policyNumber = `${prefix}${Math.floor(Math.random() * 10000)}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+    
     setGeneratedQuote({
       ...quoteData,
       proposed_premium: premium,
@@ -107,16 +116,19 @@ const QuotingPage = ({ updateDashboard }) => {
         customerId = customerResponse.customer_id;
       }
 
+      // Calculate dates for one-year policy
+      const today = new Date();
+      const effectiveDate = today.toISOString().split('T')[0];
+      
+      const expirationDate = new Date(today);
+      expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+      
       await createPolicy({
         customer_id: customerId,
         policy_type: generatedQuote.policy_type,
         policy_number: generatedQuote.policy_number,
-        effective_date: new Date().toISOString().split('T')[0],
-        expiration_date: new Date(
-          new Date().setFullYear(new Date().getFullYear() + 1)
-        )
-          .toISOString()
-          .split('T')[0],
+        effective_date: effectiveDate,
+        expiration_date: expirationDate.toISOString().split('T')[0],
         premium: generatedQuote.proposed_premium
       });
 
@@ -304,8 +316,8 @@ const QuotingPage = ({ updateDashboard }) => {
             }}
           >
             <MenuItem value="">Select Policy Type</MenuItem>
-            <MenuItem value="auto">Auto</MenuItem>
-            <MenuItem value="home">Home</MenuItem>
+            <MenuItem value="Auto">Auto</MenuItem>
+            <MenuItem value="Homeowners">Homeowners</MenuItem>
           </TextField>
         </Grid>
         <Grid item xs={12}>
